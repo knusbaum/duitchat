@@ -1,6 +1,6 @@
 module github.com/knusbaum/duitchat
 
-go 1.14
+go 1.11
 
 replace github.com/mjl-/duit => github.com/knusbaum/duit v0.0.0-20200320173102-b61f98777d95
 

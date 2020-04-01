@@ -5,75 +5,12 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"strings"
-	//"time"
 
 	"9fans.net/go/draw"
-	"github.com/fsnotify/fsnotify"
 	"github.com/mjl-/duit"
 )
-
-//var e *duit.Edit
-
-func watchDir(dir string, updates chan<- string) {
-	//	rf, err := os.Open("/tmp/9irc/raw")
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	var (
-	//		n int
-	//		ba [1024]byte
-	//	)
-	//	bs := ba[:]
-	//	for n, err = rf.Read(bs); err == nil; n, err = rf.Read(bs) {
-	//		fmt.Printf(string(bs[:n]))
-	//	}
-	//
-	//	if err != io.EOF {
-	//		log.Fatal(err)
-	//	}
-
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer watcher.Close()
-
-	err = watcher.Add(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-			log.Println("event:", event)
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				log.Println("modified file:", event.Name)
-				file := strings.TrimPrefix(event.Name, dir+"/")
-				updates <- file
-				//				if event.Name == "/tmp/9irc/raw" {
-				//					n, err = rf.Read(bs)
-				//					if err != nil {
-				//						log.Printf("Tried to read from raw, but got: %s\n", err)
-				//					} else {
-				//						fmt.Printf(string(bs[:n]))
-				//					}
-				//				}
-			}
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Println("error:", err)
-		}
-	}
-}
 
 func readChannel(d *duit.DUI, disp *mainDisplay) error {
 	var (
@@ -118,6 +55,7 @@ func (a *application) processInput(msg string) {
 		switch parts[0] {
 		case "/j":
 			log.Printf("JOIN %s", parts[1])
+			a.join(parts[1])
 		case "/q":
 			log.Printf("QUIT")
 		case "/p":
@@ -135,7 +73,6 @@ func (a *application) processInput(msg string) {
 		log.Printf("Error sending message: %s", err)
 		err = a.openCtl()
 		if err == nil {
-			//_, err = a.ctl.Write([]byte(fmt.Sprintf("msg %s %s\n", channel, msg)))
 			a.msg(channel, msg)
 		}
 		a.setStatus()
@@ -203,6 +140,10 @@ func (a *application) nick(nick string) error {
 	return a.send(fmt.Sprintf("nick %s\n", nick))
 }
 
+func (a *application) join(channel string) error {
+	return a.send(fmt.Sprintf("join %s\n", channel))
+}
+
 func (a *application) send(raw string) error {
 	if a.ctl == nil {
 		return fmt.Errorf("Cannot send. Disconnected from 9irc.")
@@ -211,19 +152,6 @@ func (a *application) send(raw string) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (a *application) openCtl() error {
-	if a.ctl != nil {
-		a.ctl.Close()
-		a.ctl = nil
-	}
-	c, err := net.Dial("unix", "/tmp/9irc/ctl")
-	if err != nil {
-		return err
-	}
-	a.ctl = c
 	return nil
 }
 
@@ -239,7 +167,7 @@ type application struct {
 	mainbox  *duit.Box
 	status   *duit.Field
 	d        *duit.DUI
-	ctl      net.Conn
+	ctl      io.ReadWriteCloser
 }
 
 func (a *application) setStatus() {
@@ -252,31 +180,12 @@ func (a *application) setStatus() {
 	a.d.MarkDraw(a.status)
 }
 
-func main() {
-	var a application
-	ed, err := duit.NewDUI("test", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	a.d = ed
-
+func (a *application) loadDisplays() {
 	edisplays, err := a.makeDisplays("/tmp/9irc")
 	if err != nil {
 		log.Fatal(err)
 	}
 	a.displays = edisplays
-
-	eraw := a.displays["raw"]
-	if eraw == nil {
-		log.Fatal("No raw file present.")
-	}
-	emain := &duit.Box{
-		Width:   0,
-		Reverse: true,
-		Kids:    eraw.kids,
-	}
-	a.current = eraw
-	a.mainbox = emain
 
 	a.chanlist = &duit.List{
 		Changed: func(index int) (e duit.Event) {
@@ -292,8 +201,48 @@ func main() {
 	for k := range a.displays {
 		a.chanlist.Values = append(a.chanlist.Values, &duit.ListValue{Text: k})
 	}
+}
 
-	a.status = &duit.Field{Keys: func(k rune, m draw.Mouse) (e duit.Event) { e.Consumed = true; return }}
+// This is really wasteful and bad.
+func (a *application) reloadDisplays() {
+	edisplays, err := a.makeDisplays("/tmp/9irc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	a.displays = edisplays
+
+	a.chanlist.Values = nil
+	for k := range a.displays {
+		a.chanlist.Values = append(a.chanlist.Values, &duit.ListValue{Text: k})
+	}
+}
+
+func main() {
+	var a application
+	ed, err := duit.NewDUI("test", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	a.d = ed
+
+	a.loadDisplays()
+	eraw := a.displays["raw"]
+	if eraw == nil {
+		log.Fatal("No raw file present.")
+	}
+	emain := &duit.Box{
+		Width:   0,
+		Reverse: true,
+		Kids:    eraw.kids,
+	}
+	a.current = eraw
+	a.mainbox = emain
+	a.status = &duit.Field{
+		Keys: func(k rune, m draw.Mouse) (e duit.Event) {
+			e.Consumed = true
+			return
+		},
+	}
 
 	a.d.Top.UI = &duit.Box{
 		Width: -1,
@@ -326,13 +275,16 @@ func main() {
 		// where we listen on two channels
 		select {
 		case u := <-updates:
-			log.Printf("Got Update!: [%s]\n", u)
 			if display, ok := a.displays[u]; ok {
 				err = readChannel(a.d, display)
 				if err != nil {
 					log.Fatal(err)
 				}
 				a.d.MarkDraw(display.edit)
+				a.d.Draw()
+			} else {
+				a.reloadDisplays()
+				a.d.MarkDraw(a.chanlist)
 				a.d.Draw()
 			}
 		case e := <-a.d.Inputs:
