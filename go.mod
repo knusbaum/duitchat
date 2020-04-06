@@ -3,8 +3,7 @@ module github.com/knusbaum/duitchat
 go 1.11
 
 replace github.com/mjl-/duit => github.com/knusbaum/duit v0.0.0-20200320173102-b61f98777d95
-
-replace 9fans.net/go => github.com/mjl-/go v0.0.0-20180429123528-fafada5f286e
+replace 9fans.net/go => github.com/knusbaum/go v0.0.0-20200406212932-8e0eca235d4a
 
 require (
 	9fans.net/go v0.0.0-00010101000000-000000000000
