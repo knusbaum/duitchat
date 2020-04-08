@@ -42,6 +42,9 @@ func processMsg(msg Msg) string {
 		case "/n":
 			log.Printf("NICK %s", parts[1])
 			return nick(parts[1])
+		case "/m":
+			log.Printf("MSG [%s]: %s", parts[1], strings.Join(parts[2:], " "))
+			return fmt.Sprintf("msg %s %s\n", parts[1], strings.Join(parts[2:], " "))
 		default:
 			log.Printf("UNKNOWN: [%#v]", parts)
 		}

@@ -88,6 +88,15 @@ func (a *App) follow(f *os.File, e *duit.Edit) {
 	}
 }
 
+func (a *App) hasWatched(name string) bool {
+	for _, val := range a.list.Values {
+		if val.Text == name {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *App) addDir(dir string) error {
 	msgs := make(chan Msg)
 	ctl, err := os.OpenFile(dir+"/ctl", os.O_RDWR, 0)
@@ -97,54 +106,66 @@ func (a *App) addDir(dir string) error {
 		go a.handleCtl(ctl, msgs)
 	}
 
-	infos, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-	for _, info := range infos {
-		name := info.Name()
-		if name == "ctl" {
-			continue
-		}
-
-		f, err := os.Open(dir + "/" + name)
-		if err != nil {
-			log.Printf("Failed to open %s/%s: %s", dir, name, err)
-			continue
-		}
-
-		edit := &duit.Edit{}
-		go a.follow(f, edit)
-
-		uis := []duit.UI{edit}
-		if ctl != nil {
-			var msg *duit.Field
-			msg = &duit.Field{
-				Placeholder: dir + "/" + name,
-				Keys: func(k rune, m draw.Mouse) (e duit.Event) {
-					if k == '\n' {
-						msgs <- Msg{from: name, msg: msg.Text}
-						msg.Text = ""
-						e.Consumed = true
-						a.ui.MarkDraw(msg)
-						//a.ui.Call <- func() { a.ui.Draw() }
-						a.SignalDraw()
-					}
-					return
-				},
+	go func() {
+		for {
+			infos, err := ioutil.ReadDir(dir)
+			if err != nil {
+				log.Printf("Error listing dir: %s", err)
+				return
 			}
-			uis = []duit.UI{msg, edit}
-		}
+			for _, info := range infos {
+				name := info.Name()
+				if name == "ctl" {
+					continue
+				}
+				if a.hasWatched(name) {
+					continue
+				}
 
-		w := &Watched{
-			display: duit.NewKids(uis...),
+				f, err := os.Open(dir + "/" + name)
+				if err != nil {
+					log.Printf("Failed to open %s/%s: %s", dir, name, err)
+					continue
+				}
+
+				edit := &duit.Edit{}
+				go a.follow(f, edit)
+
+				uis := []duit.UI{edit}
+				if ctl != nil {
+					var msg *duit.Field
+					msg = &duit.Field{
+						Placeholder: dir + "/" + name,
+						Keys: func(k rune, m draw.Mouse) (e duit.Event) {
+							if k == '\n' {
+								msgs <- Msg{from: name, msg: msg.Text}
+								msg.Text = ""
+								e.Consumed = true
+								a.ui.MarkDraw(msg)
+								//a.ui.Call <- func() { a.ui.Draw() }
+								a.SignalDraw()
+							}
+							return
+						},
+					}
+					uis = []duit.UI{msg, edit}
+				}
+
+				w := &Watched{
+					display: duit.NewKids(uis...),
+				}
+				lv := &duit.ListValue{Text: name, Value: w}
+				a.list.Values = append(a.list.Values, lv)
+				a.ui.MarkDraw(a.list)
+				a.ui.MarkLayout(a.list)
+				//a.ui.Call <- func() { a.ui.Draw() }
+				a.SignalDraw()
+			}
+
+			time.Sleep(2 * time.Second)
+			//log.Printf("Adding dir again!")
 		}
-		lv := &duit.ListValue{Text: name, Value: w}
-		a.list.Values = append(a.list.Values, lv)
-		a.ui.MarkDraw(a.list)
-		//a.ui.Call <- func() { a.ui.Draw() }
-		a.SignalDraw()
-	}
+	}()
 	return nil
 }
 
