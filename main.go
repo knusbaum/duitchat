@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -76,7 +77,9 @@ func (a *App) follow(f *os.File, e *duit.Edit) {
 	for {
 		n, err := f.Read(bs)
 		if err != nil {
-			log.Printf("ERR reading %s", err)
+			if err != io.EOF {
+				log.Printf("ERR reading %s", err)
+			}
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -193,14 +196,14 @@ func main() {
 			// functions to call, recoverable errors
 			app.ui.Input(e)
 
-		case warn, ok := <-app.ui.Error:
+		case _, ok := <-app.ui.Error:
 			// on window close (clicking the X in the top corner),
 			// the channel is closed and the application should quit.
 			// otherwise, err is a warning or recoverable error.
 			if !ok {
 				return
 			}
-			log.Printf("duit: %s\n", warn)
+			//log.Printf("duit: %s\n", warn)
 		}
 	}
 }
