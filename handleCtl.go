@@ -81,23 +81,42 @@ func (a *App) readCtl(f *os.File) chan []byte {
 	return c
 }
 
-func (a *App) handleCtl(f *os.File, msgs chan Msg) {
-	defer f.Close()
-	c := a.readCtl(f)
-	for {
-		select {
-		case bs := <-c:
-			log.Printf("CTL: %s", string(bs))
-		case m := <-msgs:
-			out := processMsg(m)
-			if out != "" {
-				_, err := f.Write([]byte(out)) // TODO: do something with n
-				if err != nil {
-					log.Printf("Error writing: %s", err)
-				}
-			}
-		case <-a.shutdown:
-			return
-		}
+func (a *App) handleCtl(dir string, msgs chan Msg) bool {
+	// Need separate ctlr and ctlw because on unix, go serializes reads and writes.
+	ctlr, err := os.OpenFile(dir+"/ctl", os.O_RDONLY, 0)
+	if err != nil {
+		log.Printf("Cannot open ctl file for dir: %s", dir)
+		return false
 	}
+
+	ctlw, err := os.OpenFile(dir+"/ctl", os.O_WRONLY, 0)
+	if err != nil {
+		ctlr.Close()
+		log.Printf("Cannot open ctl file for dir: %s", dir)
+		return false
+	}
+
+	go func() {
+		defer ctlr.Close()
+		defer ctlw.Close()
+		c := a.readCtl(ctlr)
+		for {
+
+			select {
+			case bs := <-c:
+				log.Printf("CTL: %s", string(bs))
+			case m := <-msgs:
+				out := processMsg(m)
+				if out != "" {
+					_, err := ctlw.Write([]byte(out)) // TODO: do something with n
+					if err != nil {
+						log.Printf("Error writing: %s", err)
+					}
+				}
+			case <-a.shutdown:
+				return
+			}
+		}
+	}()
+	return true
 }

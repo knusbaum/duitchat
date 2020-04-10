@@ -102,12 +102,7 @@ func (a *App) hasWatched(name string) bool {
 
 func (a *App) addDir(dir string) error {
 	msgs := make(chan Msg)
-	ctl, err := os.OpenFile(dir+"/ctl", os.O_RDWR, 0)
-	if err != nil {
-		log.Printf("No ctl file for dir: %s", dir)
-	} else {
-		go a.handleCtl(ctl, msgs)
-	}
+	ctlok := a.handleCtl(dir, msgs)
 
 	go func() {
 		for {
@@ -135,7 +130,7 @@ func (a *App) addDir(dir string) error {
 				go a.follow(f, edit)
 
 				uis := []duit.UI{edit}
-				if ctl != nil {
+				if ctlok {
 					var msg *duit.Field
 					msg = &duit.Field{
 						Placeholder: dir + "/" + name,
