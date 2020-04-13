@@ -4,7 +4,7 @@ go 1.11
 
 replace github.com/mjl-/duit => github.com/knusbaum/duit v0.0.0-20200409214549-86f61d84b97b
 
-replace 9fans.net/go => github.com/knusbaum/go v0.0.0-20200406212932-8e0eca235d4a
+replace 9fans.net/go => github.com/knusbaum/go v0.0.0-20200413212707-848f58a0ec6e
 
 require (
 	9fans.net/go v0.0.2
