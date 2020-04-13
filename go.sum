@@ -1,8 +1,6 @@
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
-github.com/knusbaum/duit v0.0.0-20200409213609-acfd857bec3a h1:iChS0loBykIv82ECHIW5XeglJ6FBUHl4eUPW2BXiP7E=
-github.com/knusbaum/duit v0.0.0-20200409213609-acfd857bec3a/go.mod h1:OlRagobzQ97GoM+WaQ5kyzdyts952BFYsuY5bMyv9tw=
-github.com/knusbaum/duit v0.0.0-20200409214549-86f61d84b97b h1:OVHlDtmacV/QY95dQlY49W+a3zUCiOTwM2XVvrCJyQc=
-github.com/knusbaum/duit v0.0.0-20200409214549-86f61d84b97b/go.mod h1:OlRagobzQ97GoM+WaQ5kyzdyts952BFYsuY5bMyv9tw=
+github.com/knusbaum/duit v0.0.0-20200413214450-5cc3648b5133 h1:/PPvy1SKUjIFemUVKhSNkWCesORZvOag65FioCvRPH4=
+github.com/knusbaum/duit v0.0.0-20200413214450-5cc3648b5133/go.mod h1:bCuFm7lhAl9wLyLCC6E4RVLDpAv7bWfnTMeDd+C4OQ8=
 github.com/knusbaum/go v0.0.0-20200406212932-8e0eca235d4a h1:agFJppuZ7zIDcTWGV6v8vx5RW3Gpi/8oXWX4gFZn6hg=
 github.com/knusbaum/go v0.0.0-20200406212932-8e0eca235d4a/go.mod h1:VCPNE8vAcDWdtdY1piEGVOtcdrgFfQ3xV6q4XUwdAm8=
 github.com/knusbaum/go v0.0.0-20200413212707-848f58a0ec6e h1:sMC7OcZa45aGaUJlCN2gK6l5IQD9WXTLXtFWIzZaeJQ=

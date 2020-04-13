@@ -2,7 +2,7 @@ module github.com/knusbaum/duitchat
 
 go 1.11
 
-replace github.com/mjl-/duit => github.com/knusbaum/duit v0.0.0-20200409214549-86f61d84b97b
+replace github.com/mjl-/duit => github.com/knusbaum/duit v0.0.0-20200413214450-5cc3648b5133
 
 replace 9fans.net/go => github.com/knusbaum/go v0.0.0-20200413212707-848f58a0ec6e
 
