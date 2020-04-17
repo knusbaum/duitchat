@@ -71,19 +71,54 @@ func NewApp() (*App, error) {
 	return &app, nil
 }
 
-func (a *App) follow(f *os.File, e *duit.Edit) {
-	var ba [4096]byte
+func (a *App) follow(f *os.File, path string, e *duit.Edit) {
+	defer f.Close()
+
+	finfo, err := f.Stat()
+	if err != nil {
+		log.Printf("ERR Getting file stats: %s", err)
+		return
+	}
+	fsize := finfo.Size()
+
+	var ba [8192]byte
 	bs := ba[:]
 	for {
 		n, err := f.Read(bs)
 		if err != nil {
 			if err != io.EOF {
 				log.Printf("ERR reading %s", err)
+
+				// Get offset.
+				off, err := f.Seek(0, os.SEEK_CUR)
+				if err != nil {
+					log.Printf("ERR Determining stream offset.")
+				}
+
+				f, err = os.Open(path)
+				if err != nil {
+					log.Printf("ERR Reopening: %s", err)
+					return
+				}
+				
+				log.Printf("[follow %s] Seeking to %d", path, off)
+				noff, err := f.Seek(off, os.SEEK_SET)
+				if err != nil {
+					log.Printf("ERR Seeking: %s", err)
+				}
+
+				if noff != off {
+					log.Printf("Tried to seek to %d, but seeked to %d.", off, noff)
+				}
 			}
 			time.Sleep(1 * time.Second)
 			continue
 		}
 		e.Append(bs[:n])
+		if e.Size() < fsize {
+			log.Printf("SKIPPING REDRAW")
+			continue
+		}
 		e.ScrollCursor(a.ui)
 		a.ui.MarkDraw(e)
 		a.SignalDraw()
@@ -127,7 +162,7 @@ func (a *App) addDir(dir string) error {
 				}
 
 				edit := &duit.Edit{}
-				go a.follow(f, edit)
+				go a.follow(f, dir + "/" + name, edit)
 
 				uis := []duit.UI{edit}
 				if ctlok {
