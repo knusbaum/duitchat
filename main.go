@@ -116,7 +116,6 @@ func (a *App) follow(f *os.File, path string, e *duit.Edit) {
 		}
 		e.Append(bs[:n])
 		if e.Size() < fsize {
-			log.Printf("SKIPPING REDRAW")
 			continue
 		}
 		e.ScrollCursor(a.ui)
